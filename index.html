@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoMarket | Tienda Local</title>
+    <style>
+        body { font-family: system-ui, sans-serif; background: #f0fdf4; margin: 0; padding: 15px; color: #14532d; }
+        .container { max-width: 820px; margin: auto; }
+        header { background: #15803d; color: white; padding: 15px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        header h2 { margin: 0; font-size: 20px; }
+        .filtros { margin: 15px 0; display: flex; gap: 8px; flex-wrap: wrap; }
+        .filtros button { background: #fff; color: #15803d; border: 1px solid #15803d; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-weight: bold; }
+        .filtros button.activo { background: #15803d; color: white; }
+        .layout { display: grid; grid-template-columns: 2fr 1fr; gap: 15px; }
+        @media (max-width: 650px) { .layout { grid-template-columns: 1fr; } }
+        .catalogo { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+        .prod-card { background: white; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        .prod-card span.cat { font-size: 11px; background: #dcfce7; padding: 2px 8px; border-radius: 10px; color: #166534; }
+        .prod-card h4 { margin: 8px 0 4px 0; font-size: 15px; }
+        .prod-card p { font-weight: bold; color: #15803d; font-size: 16px; margin: 6px 0 10px 0; }
+        .btn-add { background: #16a34a; color: white; border: none; padding: 8px; width: 100%; border-radius: 5px; font-weight: bold; cursor: pointer; }
+        .carrito-panel { background: white; border: 1px solid #bbf7d0; border-radius: 8px; padding: 15px; height: fit-content; }
+        .item-cart { display: flex; justify-content: space-between; font-size: 13px; border-bottom: 1px solid #f0fdf4; padding: 6px 0; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <h2>🌱 EcoMarket Laguna - Tienda Local</h2>
+        <div>🛒 Artículos: <strong id="countCart">0</strong></div>
+    </header>
+
+    <div class="filtros">
+        <button class="activo" onclick="filtrarCat('Todas', this)">Todas</button>
+        <button onclick="filtrarCat('Orgánicos', this)">Orgánicos</button>
+        <button onclick="filtrarCat('Artesanal', this)">Artesanal</button>
+        <button onclick="filtrarCat('Hogar Eco', this)">Hogar Eco</button>
+    </div>
+
+    <div class="layout">
+        <div class="catalogo" id="gridProductos"></div>
+
+        <div class="carrito-panel">
+            <h3 style="margin-top:0; border-bottom:1px solid #dcfce7; padding-bottom:8px;">🛍️ Tu Carrito</h3>
+            <div id="listaCarrito"></div>
+            <p style="font-size:16px; font-weight:bold; text-align:right; margin-top:12px;">
+                Total: $<span id="totalCarrito">0.00</span>
+            </p>
+            <button class="btn-add" style="background:#0f172a;" onclick="finalizarCompra()">Finalizar Pedido</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    const productos = [
+        { id: 1, nombre: "Miel de Abeja Pura 500g", cat: "Orgánicos", precio: 110 },
+        { id: 2, nombre: "Bolsa Reutilizable Manta", cat: "Hogar Eco", precio: 45 },
+        { id: 3, nombre: "Jabón Artesanal Avena", cat: "Artesanal", precio: 38 },
+        { id: 4, nombre: "Nuez Pecana de Parras 1kg", cat: "Orgánicos", precio: 185 },
+        { id: 5, nombre: "Cepillo Dental Bambú", cat: "Hogar Eco", precio: 30 },
+        { id: 6, nombre: "Vela de Soya Aromática", cat: "Artesanal", precio: 95 }
+    ];
+
+    let categoriaActual = "Todas";
+    let carrito = JSON.parse(localStorage.getItem("ecomarket_502")) || [];
+
+    function filtrarCat(cat, btn) {
+        categoriaActual = cat;
+        document.querySelectorAll(".filtros button").forEach(b => b.classList.remove("activo"));
+        btn.classList.add("activo");
+        renderCatalogo();
+    }
+
+    function renderCatalogo() {
+        const grid = document.getElementById("gridProductos");
+        grid.innerHTML = "";
+        const filtrados = categoriaActual === "Todas" ? productos : productos.filter(p => p.cat === categoriaActual);
+
+        filtrados.forEach(p => {
+            grid.innerHTML += `
+                <div class="prod-card">
+                    <span class="cat">${p.cat}</span>
+                    <h4>${p.nombre}</h4>
+                    <p>$${p.precio.toFixed(2)}</p>
+                    <button class="btn-add" onclick="agregarAlCarrito(${p.id})">+ Agregar</button>
+                </div>`;
+        });
+    }
+
+    function agregarAlCarrito(id) {
+        const prod = productos.find(p => p.id === id);
+        const item = carrito.find(c => c.id === id);
+        if (item) { item.cant++; } else { carrito.push({ ...prod, cant: 1 }); }
+        guardarYRenderizarCarrito();
+    }
+
+    function quitarDelCarrito(id) {
+        carrito = carrito.filter(c => c.id !== id);
+        guardarYRenderizarCarrito();
+    }
+
+    function guardarYRenderizarCarrito() {
+        localStorage.setItem("ecomarket_502", JSON.stringify(carrito));
+        const lista = document.getElementById("listaCarrito");
+        lista.innerHTML = "";
+        let total = 0, piezas = 0;
+
+        if (carrito.length === 0) {
+            lista.innerHTML = `<small style="color:#64748b;">El carrito está vacío.</small>`;
+        } else {
+            carrito.forEach(c => {
+                total += c.precio * c.cant;
+                piezas += c.cant;
+                lista.innerHTML += `
+                    <div class="item-cart">
+                        <span>${c.cant}x ${c.nombre}</span>
+                        <span>$${(c.precio * c.cant).toFixed(2)} 
+                        <button onclick="quitarDelCarrito(${c.id})" style="background:#dc2626; color:#fff; border:none; border-radius:3px; cursor:pointer; margin-left:4px;">x</button></span>
+                    </div>`;
+            });
+        }
+        document.getElementById("totalCarrito").innerText = total.toFixed(2);
+        document.getElementById("countCart").innerText = piezas;
+    }
+
+    function finalizarCompra() {
+        if (carrito.length === 0) { alert("Agrega productos antes de finalizar."); return; }
+        alert("✅ ¡Pedido confirmado! Gracias por comprar en EcoMarket.");
+        carrito = [];
+        guardarYRenderizarCarrito();
+    }
+
+    renderCatalogo();
+    guardarYRenderizarCarrito();
+</script>
+</body>
+</html>
